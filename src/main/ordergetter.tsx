@@ -1,22 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { google } from 'googleapis';
+import { Order, Item } from 'types';
 import { web } from './google_keys.json';
-
-type Order = {
-  orderno: string | undefined;
-  date: string | undefined;
-  email: string | undefined;
-  status: string | undefined;
-  source: 'ohmygood' | 'Shopify' | undefined;
-  items: Item[] | undefined;
-};
-type Item = {
-  itemno: string | undefined;
-  name: string | undefined;
-  variant: string | undefined;
-  image: string | undefined;
-  quantity: string | undefined;
-};
 
 /**
  * Gets the ohmygood order data from gmail and parses it
@@ -81,12 +66,12 @@ async function getOhmygoodOrders(tokens: Credentials): Promise<Order[]> {
 
       return messageData.map(function parseMessage(message) {
         const newOrder: Order = {
-          orderno: undefined,
-          date: undefined,
-          email: undefined,
-          status: undefined,
-          source: undefined,
-          items: undefined,
+          orderno: '-1',
+          date: new Date().toISOString(),
+          email: '',
+          status: 'canceled',
+          source: 'Shopify',
+          items: [],
         };
 
         // Parse the message
@@ -97,12 +82,12 @@ async function getOhmygoodOrders(tokens: Credentials): Promise<Order[]> {
         const ordernoHTML = emaildoc.getElementsByTagName('h2')[0].innerHTML;
         const ordernoRegex = /Bestelling #(\d*) .*/;
         const orderno = ordernoHTML.match(ordernoRegex);
-        newOrder.orderno = orderno?.at(1);
+        newOrder.orderno = orderno?.at(1) || '-1';
 
         // Date
         const dateRegex = /datetime="(.*?)">/;
         const date = ordernoHTML.match(dateRegex);
-        newOrder.date = date?.at(1);
+        newOrder.date = date?.at(1) || new Date().toISOString();
 
         // Email
         const addressHTML = emaildoc.getElementsByTagName('address')[0];
@@ -115,21 +100,21 @@ async function getOhmygoodOrders(tokens: Credentials): Promise<Order[]> {
         const orderItems = emaildoc.getElementsByClassName('order_item');
         Array.from(orderItems).forEach((orderItem) => {
           const item: Item = {
-            itemno: undefined,
-            name: undefined,
-            variant: undefined,
-            image: undefined,
-            quantity: undefined,
+            itemno: '-1',
+            name: '',
+            variant: '',
+            image: '',
+            quantity: '0',
           };
 
           const itemHTML = orderItem.getElementsByTagName('td');
           const itemRegex = /(.*?) - (.*?) \(#(\d*)\)/;
           const itemParsed = itemHTML.item(0)?.textContent?.match(itemRegex);
-          item.name = itemParsed?.at(1);
-          item.variant = itemParsed?.at(2);
-          item.itemno = itemParsed?.at(3);
+          item.name = itemParsed?.at(1) || '';
+          item.variant = itemParsed?.at(2) || '';
+          item.itemno = itemParsed?.at(3) || '-1';
 
-          item.quantity = itemHTML.item(1)?.textContent || undefined;
+          item.quantity = itemHTML.item(1)?.textContent || '0';
 
           item.image =
             'https://upload.wikimedia.org/wikipedia/commons/e/e5/HUC_031300010104_-_Chickamauga_Creek.PNG'; // channableItems[item.itemno].imageurl;

@@ -35,6 +35,41 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate(arg));
 });
 
+ipcMain.handle('test-order', (event, arg) => {
+  console.log('got get-orders');
+
+  const store = new ElectronStore();
+  const token: Credentials = store.get('token');
+
+  // TODO: Check expiry date and get accordingly
+  if (token === undefined || token.expiry_date < new Date()) {
+    console.log('Token was expired or removed');
+    const myApiOauth = new ElectronGoogleOAuth2(
+      web.web.client_id,
+      web.web.client_secret,
+      ['https://www.googleapis.com/auth/gmail.readonly'],
+      { successRedirectURL: 'https://fraenck.com' }
+    );
+
+    return myApiOauth
+      .openAuthWindowAndGetTokens()
+      .then(async (newToken) => {
+        // use your token.access_token
+        store.set('token', newToken);
+        const orders = await getOrders(newToken);
+        return orders;
+      })
+      .catch((e) => {
+        console.log(e);
+        return [];
+      });
+  }
+
+  const expiryDate = new Date(token.expiry_date!);
+  console.log(expiryDate);
+  return getOrders(token);
+});
+
 ipcMain.on('get-orders', async (event, arg) => {
   console.log('got get-orders');
 

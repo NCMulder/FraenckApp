@@ -27,6 +27,9 @@ const electronHandler = {
     getOrders() {
       ipcRenderer.send('get-orders');
     },
+    testThing() {
+      return ipcRenderer.invoke('test-order');
+    },
   },
 };
 
